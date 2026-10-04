@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec
+
+# user profiles (created next to the script/exe)
+profiles/
+*.json.tmp
+
+# local virtual environment
+.venv/
