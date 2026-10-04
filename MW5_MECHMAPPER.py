@@ -45,7 +45,7 @@ import tkinter as tk  # noqa: E402
 from tkinter import ttk, messagebox  # noqa: E402
 
 APP_NAME = "Mech Mapper"
-APP_VERSION = "2.3.0"      # must match the GitHub release tag (v2.0.0) - the release workflow checks
+APP_VERSION = "2.3.1"      # must match the GitHub release tag (v2.0.0) - the release workflow checks
 GITHUB_REPO = "SFXShannon/MechMapper"
 IS_WINDOWS = os.name == "nt"
 
@@ -2417,9 +2417,9 @@ class MechMapperApp:
         gh = tk.Label(bar, text="Post on GitHub instead", bg=C["panel"], fg=C["amber"], font=FONT_UI,
                       cursor="hand2")
         gh.pack(side=tk.LEFT, padx=(16, 0), pady=12)
-        send_btn = ttk.Button(bar, text="Send", style="Map.TButton", width=10)
+        send_btn = ttk.Button(bar, text="Send", style="Map.TButton", width=-10, padding=(18, 4))
         send_btn.pack(side=tk.RIGHT, padx=(6, 16), pady=10)
-        cancel_btn = ttk.Button(bar, text="Cancel", width=8)
+        cancel_btn = ttk.Button(bar, text="Cancel", width=-8, padding=(16, 4))
         cancel_btn.pack(side=tk.RIGHT, pady=10)
         status.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=12)
 
@@ -2596,9 +2596,11 @@ class MechMapperApp:
                               text="Don't show the full tour at startup" if whats_new
                               else "Don't show this at startup")
         hide.pack(side=tk.LEFT, padx=(16, 0), pady=12)
-        next_btn = ttk.Button(bar, style="Map.TButton", width=12)
+        # negative width = minimum width, and extra padding: Tk measures the label with Segoe UI, but
+        # Windows draws the check mark from a wider symbol font, which clipped "Get started" at some scalings
+        next_btn = ttk.Button(bar, style="Map.TButton", width=-12, padding=(18, 4))
         next_btn.pack(side=tk.RIGHT, padx=(6, 16), pady=10)
-        back_btn = ttk.Button(bar, text="\u2190 Back", width=8)
+        back_btn = ttk.Button(bar, text="\u2190 Back", width=-8, padding=(16, 4))
         guide = tk.Label(bar, text="Full guide", bg=C["panel"], fg=C["amber"], font=FONT_UI, cursor="hand2")
         guide.bind("<Button-1>", lambda e: webbrowser.open(GUIDE_URL))
         dots = tk.Canvas(bar, height=12, width=max(1, len(steps)) * 16 + 20, bg=C["panel"], highlightthickness=0)
