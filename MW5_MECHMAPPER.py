@@ -44,7 +44,7 @@ import tkinter as tk  # noqa: E402
 from tkinter import ttk, messagebox  # noqa: E402
 
 APP_NAME = "Mech Mapper"
-APP_VERSION = "2.1.0"      # must match the GitHub release tag (v2.0.0) - the release workflow checks
+APP_VERSION = "2.2.0"      # must match the GitHub release tag (v2.0.0) - the release workflow checks
 GITHUB_REPO = "SFXShannon/MechMapper"
 IS_WINDOWS = os.name == "nt"
 
@@ -84,6 +84,8 @@ LEGACY_SINGLE_CONFIG = os.path.join(os.path.expanduser("~"), ".xbox360_mapper_pr
 
 VIGEM_INSTALLER = os.path.join("vendor", "ViGEmBus_1.22.0_x64_x86_arm64.exe")
 ICON_FILE = "mech_mapper.ico"
+LOGO_FILE = "mech_mapper.png"
+GUIDE_URL = f"https://github.com/{GITHUB_REPO}/blob/main/docs/TUTORIAL.md"
 
 # ---------------------------------------------------------------------------
 # Tuning
@@ -1385,6 +1387,56 @@ class Updater:
 
 
 # ---------------------------------------------------------------------------
+# Quick tour (shown at startup until the user turns it off)
+# ---------------------------------------------------------------------------
+
+# "since": a step added in that version is shown once after updating, even to
+# people who turned the tour off at startup.
+TUTORIAL_STEPS = [
+    {"icon": "logo", "title": "Welcome to Mech Mapper",
+     "body": "Mech Mapper turns your HOTAS, joystick or other controllers into the Xbox controller "
+             "and keyboard that MechWarrior 5 understands. Mix a stick, a throttle and pedals in one "
+             "setup, and save it as a profile.\n\nThis quick tour takes about a minute."},
+    {"icon": "joystick", "title": "Your devices",
+     "body": "Every controller Windows can see is listed at the top, and Mech Mapper reads all of "
+             "them at once. Devices are picked up automatically when you plug them in.\n\n"
+             "Select one and click Test Joystick to see its axes, hat and buttons live. It's a good "
+             "way to check your hardware before binding anything."},
+    {"icon": "gamepad", "title": "Bind the Xbox controller",
+     "body": "In Binds, click Map on a row, then move the axis or press the button you want. The "
+             "row turns green when it's bound. Press Esc to stop waiting.\n\n"
+             "Sticks and triggers can follow a real axis (Axis) or buttons (Button, with separate + "
+             "and - for sticks). Tick INV if an axis works backwards. The Action column shows what "
+             "each control does in MechWarrior 5."},
+    {"icon": "keyboard", "title": "Keyboard keys",
+     "body": "Keyboard Binds turns a button, hat direction or axis movement into a key press. Pick a "
+             "key, click Map, then press the input. One axis can drive two keys, one for each "
+             "direction.\n\nClick T to test a key: you get 3 seconds to click into the game. If a "
+             "game ignores the keys, try the other Key Mode."},
+    {"icon": "power", "title": "Arm it and play",
+     "body": "Click Enable to switch on the virtual Xbox controller, and KB Enable for keyboard keys. "
+             "They turn green, and the lamp in the top-right says ARMED.\n\nLeave Mech Mapper "
+             "running while you play; it works in the background, even with the game in front."},
+    {"icon": "save", "title": "Profiles",
+     "body": "Type a name in Profile and click Save. The profile you used last loads by itself next "
+             "time, and a * in the title bar means there are unsaved changes.\n\nFolder opens the "
+             "folder your profiles are kept in, so you can back them up or copy them to another PC."},
+    {"icon": "update", "title": "Updates and help",
+     "body": "Mech Mapper checks for new versions when it starts and offers to install them. Click "
+             "the version in the top-right corner to check yourself.\n\nOpen this tour again any "
+             "time from Tutorial at the top of the window. Full guide opens the step-by-step guide "
+             "with pictures."},
+]
+
+
+def new_tutorial_steps(seen):
+    """Steps added since version `seen` (and no newer than this version)."""
+    seen_v = parse_version(seen or "0")
+    return [s for s in TUTORIAL_STEPS
+            if s.get("since") and seen_v < parse_version(s["since"]) <= parse_version(APP_VERSION)]
+
+
+# ---------------------------------------------------------------------------
 # Theme
 # ---------------------------------------------------------------------------
 
@@ -1433,13 +1485,13 @@ class MechMapperApp:
         Updater.cleanup_previous()
         self.try_autoload()
         self._update_title()
-        if self.app_settings.get("check_updates", True):
-            self.root.after(2500, lambda: self.check_for_updates(manual=False))
+        self._tour_window = None
+        self.root.after(700, self._startup_tour)
 
         self.root.bind("<Escape>", lambda e: self.cancel_mapping())
         self.root.protocol("WM_DELETE_WINDOW", self.on_close)
         self.engine.start()
-        self.root.after(30, self._pump_engine_events)
+        self._pump_after = self.root.after(30, self._pump_engine_events)
 
     def _set_icon(self):
         icon_path = resource_path(ICON_FILE)
@@ -1522,6 +1574,10 @@ class MechMapperApp:
         self.update_btn = tk.Label(header, text=f"v{APP_VERSION}  \u21bb check for updates",
                                    bg=C["panel"], fg=C["muted"], font=FONT_MONO, cursor="hand2")
         self.update_btn.pack(side=tk.RIGHT, padx=8)
+        self.tutorial_btn = tk.Label(header, text="? Tutorial", bg=C["panel"], fg=C["amber"],
+                                     font=FONT_MONO, cursor="hand2")
+        self.tutorial_btn.pack(side=tk.RIGHT, padx=8)
+        self.tutorial_btn.bind("<Button-1>", lambda e: self.show_tutorial())
         self.update_btn.bind("<Button-1>", lambda e: self.on_update_clicked())
 
         outer, body = self.make_section(
@@ -1882,7 +1938,7 @@ class MechMapperApp:
                     self._handle_update_event(kind, ev[1:])
         except queue.Empty:
             pass
-        self.root.after(30, self._pump_engine_events)
+        self._pump_after = self.root.after(30, self._pump_engine_events)
 
     def _rebuild_device_list(self):
         self.joystick_listbox.delete(0, tk.END)
@@ -2208,6 +2264,205 @@ class MechMapperApp:
                            fg="#14171b" if pressed else C["muted"])
         win.after(33, self.update_tester)
 
+    # ---------------- Quick tour ----------------
+
+    def _startup_tour(self):
+        """Show the tour at startup (or just what's new after an update), then check for updates."""
+        seen = self.app_settings.get("tutorial_seen", "")
+        if not self.app_settings.get("hide_tutorial", False):
+            self.show_tutorial(on_close=self._after_startup_tour)
+        elif seen and new_tutorial_steps(seen):
+            self.show_tutorial(new_tutorial_steps(seen), whats_new=True, on_close=self._after_startup_tour)
+        else:
+            self._after_startup_tour()
+
+    def _after_startup_tour(self):
+        if self.app_settings.get("check_updates", True):
+            self.root.after(1500, lambda: self.check_for_updates(manual=False))
+
+    def show_tutorial(self, steps=None, whats_new=False, on_close=None):
+        if self._tour_window is not None:
+            try:
+                self._tour_window.lift()
+                return
+            except tk.TclError:
+                pass
+        steps = list(steps or TUTORIAL_STEPS)
+        # sizes follow Windows display scaling (Tk reports ~1.33 pixels per point at 100%)
+        scale = max(1.0, float(self.root.tk.call("tk", "scaling")) / (96 / 72))
+        wrap = int(440 * scale)
+        win = tk.Toplevel(self.root)
+        self._tour_window = win
+        win.title(f"What's new in {APP_NAME}" if whats_new else f"Welcome to {APP_NAME}")
+        win.configure(bg=C["bg"])
+        win.resizable(False, False)
+        win.transient(self.root)
+
+        body = tk.Frame(win, bg=C["bg"])
+        body.pack(fill=tk.BOTH, expand=True, padx=30, pady=(28, 12))
+        icon = tk.Canvas(body, width=124, height=124, bg=C["bg"], highlightthickness=0)
+        icon.pack(side=tk.LEFT, anchor="n", padx=(0, 26))
+        text = tk.Frame(body, bg=C["bg"])
+        text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        step_lbl = tk.Label(text, bg=C["bg"], fg=C["amber"], font=("Consolas", 9, "bold"), anchor="w")
+        step_lbl.pack(fill=tk.X)
+        title_lbl = tk.Label(text, bg=C["bg"], fg=C["text"], font=("Segoe UI", 17, "bold"),
+                             anchor="w", justify="left", wraplength=wrap)
+        title_lbl.pack(fill=tk.X, pady=(4, 10))
+        body_lbl = tk.Label(text, bg=C["bg"], fg="#c4cad6", font=("Segoe UI", 11),
+                            anchor="nw", justify="left", wraplength=wrap)
+        body_lbl.pack(fill=tk.BOTH, expand=True)
+
+        bar = tk.Frame(win, bg=C["panel"], highlightthickness=1, highlightbackground=C["border"])
+        bar.pack(fill=tk.X, side=tk.BOTTOM)
+        hide_var = tk.BooleanVar(value=bool(self.app_settings.get("hide_tutorial", False)))
+        hide = tk.Checkbutton(bar, variable=hide_var, bg=C["panel"], fg=C["text"],
+                              activebackground=C["panel"], activeforeground=C["text"],
+                              selectcolor=C["panel2"], highlightthickness=0, bd=0, font=FONT_UI,
+                              text="Don't show the full tour at startup" if whats_new
+                              else "Don't show this at startup")
+        hide.pack(side=tk.LEFT, padx=(16, 0), pady=12)
+        next_btn = ttk.Button(bar, style="Map.TButton", width=12)
+        next_btn.pack(side=tk.RIGHT, padx=(6, 16), pady=10)
+        back_btn = ttk.Button(bar, text="\u2190 Back", width=8)
+        guide = tk.Label(bar, text="Full guide", bg=C["panel"], fg=C["amber"], font=FONT_UI, cursor="hand2")
+        guide.bind("<Button-1>", lambda e: webbrowser.open(GUIDE_URL))
+        dots = tk.Canvas(bar, height=12, width=max(1, len(steps)) * 16 + 20, bg=C["panel"], highlightthickness=0)
+        dots.pack(side=tk.LEFT, expand=True)
+
+        state = {"i": 0}
+        try:
+            logo = tk.PhotoImage(file=resource_path(LOGO_FILE)).subsample(3)
+        except tk.TclError:
+            logo = None
+        win._logo = logo  # keep a reference so Tk doesn't drop the image
+
+        def render():
+            i = state["i"]
+            s = steps[i]
+            last = i == len(steps) - 1
+            if whats_new:
+                step_lbl.config(text="NEW SINCE YOUR LAST VERSION"
+                                + (f"  -  {i + 1} OF {len(steps)}" if len(steps) > 1 else ""))
+            else:
+                step_lbl.config(text=f"STEP {i + 1} OF {len(steps)}")
+            title_lbl.config(text=s["title"])
+            body_lbl.config(text=s["body"])
+            self._draw_tour_icon(icon, s["icon"], logo)
+            # right-hand side, from the edge inwards: Next, Back, Full guide
+            back_btn.pack_forget()
+            guide.pack_forget()
+            if i > 0:
+                back_btn.pack(side=tk.RIGHT, pady=10, after=next_btn)
+            if last:
+                guide.pack(side=tk.RIGHT, padx=(0, 12), after=back_btn if i > 0 else next_btn)
+            next_btn.config(text=("\u2714 Got it" if whats_new else "\u2714 Get started") if last
+                            else "Next \u2192")
+            dots.delete("all")
+            if len(steps) > 1:
+                x = 10
+                for d in range(len(steps)):
+                    w = 20 if d == i else 7
+                    dots.create_rectangle(x, 3, x + w, 10, outline="",
+                                          fill=C["amber"] if d == i else C["border"])
+                    x += w + 6
+
+        def go(delta):
+            n = state["i"] + delta
+            if n < 0:
+                return
+            if n >= len(steps):
+                close()
+                return
+            state["i"] = n
+            render()
+
+        def close():
+            self.app_settings["hide_tutorial"] = bool(hide_var.get())
+            self.app_settings["tutorial_seen"] = APP_VERSION
+            save_app_settings(self.app_settings)
+            try:
+                win.grab_release()
+            except tk.TclError:
+                pass
+            win.destroy()
+            self._tour_window = None
+            if on_close:
+                on_close()
+
+        next_btn.config(command=lambda: go(1))
+        back_btn.config(command=lambda: go(-1))
+        win.bind("<Right>", lambda e: go(1))
+        win.bind("<Left>", lambda e: go(-1))
+        win.bind("<Escape>", lambda e: close())
+        win.protocol("WM_DELETE_WINDOW", close)
+
+        # size the window for the tallest step, then show the first one
+        w, h = int(700 * scale), 0
+        for n in range(len(steps)):
+            state["i"] = n
+            render()
+            win.update_idletasks()
+            h = max(h, win.winfo_reqheight())
+        h += int(16 * scale)  # breathing room above the button bar
+        state["i"] = 0
+        render()
+        x = self.root.winfo_rootx() + max(0, (self.root.winfo_width() - w) // 2)
+        y = self.root.winfo_rooty() + max(0, (self.root.winfo_height() - h) // 3)
+        win.geometry(f"{w}x{h}+{x}+{y}")
+        try:
+            win.grab_set()
+        except tk.TclError:
+            pass
+        win.focus_set()
+        return win
+
+    @staticmethod
+    def _draw_tour_icon(cv, name, logo):
+        """Amber line icons on a ringed circle, in the app's cockpit style."""
+        cv.delete("all")
+        a, dim, lw = C["amber"], "#3a2e1c", 3
+        cv.create_oval(4, 4, 120, 120, fill="#1e1a14", outline=dim, width=2)
+        cv.create_oval(10, 10, 114, 114, outline=a, width=2)
+        cx = cy = 62
+        if name == "logo" and logo is not None:
+            cv.create_image(cx, cy, image=logo)
+        elif name == "joystick":
+            cv.create_oval(cx - 26, cy + 14, cx + 26, cy + 30, outline=a, width=lw)
+            cv.create_line(cx, cy + 20, cx, cy - 12, fill=a, width=lw + 2, capstyle="round")
+            cv.create_oval(cx - 10, cy - 30, cx + 10, cy - 10, outline=a, width=lw)
+            cv.create_oval(cx + 12, cy + 4, cx + 20, cy + 12, fill=a, outline=a)
+        elif name == "gamepad":
+            cv.create_polygon(cx - 32, cy - 12, cx + 32, cy - 12, cx + 38, cy + 18, cx + 26, cy + 24,
+                              cx + 14, cy + 10, cx - 14, cy + 10, cx - 26, cy + 24, cx - 38, cy + 18,
+                              outline=a, fill="", width=lw, joinstyle="round", smooth=False)
+            cv.create_line(cx - 22, cy, cx - 10, cy, fill=a, width=lw)
+            cv.create_line(cx - 16, cy - 6, cx - 16, cy + 6, fill=a, width=lw)
+            cv.create_oval(cx + 10, cy - 5, cx + 16, cy + 1, fill=a, outline=a)
+            cv.create_oval(cx + 19, cy + 1, cx + 25, cy + 7, fill=a, outline=a)
+        elif name == "keyboard":
+            cv.create_rectangle(cx - 34, cy - 18, cx + 34, cy + 18, outline=a, width=lw)
+            for row, y in enumerate((cy - 8, cy + 1)):
+                for k in range(6 - row):
+                    x = cx - 26 + k * 10 + row * 5
+                    cv.create_rectangle(x, y - 3, x + 5, y + 3, fill=a, outline=a)
+            cv.create_line(cx - 16, cy + 10, cx + 16, cy + 10, fill=a, width=lw)
+        elif name == "power":
+            cv.create_arc(cx - 26, cy - 26, cx + 26, cy + 26, start=120, extent=300,
+                          style="arc", outline=a, width=lw + 1)
+            cv.create_line(cx, cy - 32, cx, cy - 4, fill=a, width=lw + 1, capstyle="round")
+        elif name == "save":
+            cv.create_polygon(cx - 26, cy - 28, cx + 18, cy - 28, cx + 28, cy - 18, cx + 28, cy + 28,
+                              cx - 26, cy + 28, outline=a, fill="", width=lw)
+            cv.create_rectangle(cx - 14, cy - 28, cx + 12, cy - 12, outline=a, width=lw)
+            cv.create_rectangle(cx - 16, cy + 6, cx + 18, cy + 28, outline=a, width=lw)
+        elif name == "update":
+            cv.create_line(cx, cy - 30, cx, cy + 6, fill=a, width=lw + 1, capstyle="round")
+            cv.create_line(cx - 14, cy - 8, cx, cy + 6, cx + 14, cy - 8, fill=a, width=lw + 1,
+                           capstyle="round", joinstyle="round")
+            cv.create_line(cx - 28, cy + 12, cx - 28, cy + 26, cx + 28, cy + 26, cx + 28, cy + 12,
+                           fill=a, width=lw, joinstyle="round")
+
     # ---------------- Updates ----------------
 
     def check_for_updates(self, manual=True):
@@ -2341,6 +2596,10 @@ class MechMapperApp:
     def on_close(self):
         if not self._confirm_discard():
             return
+        try:
+            self.root.after_cancel(self._pump_after)
+        except (AttributeError, ValueError, tk.TclError):
+            pass
         self.engine.stop()
         self.root.destroy()
 

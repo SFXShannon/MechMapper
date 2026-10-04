@@ -41,6 +41,7 @@ Mech Mapper needs administrator rights so its key presses reach games that run a
 - **Bind conflict detection**: refuses to bind a physical input that's already in use elsewhere.
 - **Named profiles**: saved as JSON in a `profiles` folder; the last-used profile loads on startup, and you're asked before unsaved changes are thrown away.
 - **Input tester window**: live view of axes, hats, and buttons for the selected device.
+- **Quick tour** at startup (with a "Don't show this at startup" box), and a **Tutorial** link to open it again.
 - **Built-in updater**: installs new versions from GitHub Releases.
 - **Cockpit-styled UI**: dark theme with amber/green status indicators. A binding shows amber when its device isn't plugged in.
 
@@ -75,7 +76,7 @@ Run `build.bat` (it installs PyInstaller if needed). It builds:
   pyinstaller --noconfirm --onefile --windowed --uac-admin ^
       --add-data "vendor;vendor" --collect-all vgamepad ^
       --icon mech_mapper.ico --add-data "mech_mapper.ico;." ^
-      --add-data "LICENSE.txt;." --add-data "THIRD_PARTY_NOTICES.txt;." ^
+      --add-data "LICENSE.txt;." --add-data "THIRD_PARTY_NOTICES.txt;." --add-data "mech_mapper.png;." ^
       MW5_MECHMAPPER.py
   ```
 - `dist\MechMapper-Setup-<version>.exe`, the installer, with [Inno Setup 6](https://jrsoftware.org/isdl.php) from `installer.iss` (via `build_installer.ps1`). It's skipped if Inno Setup isn't installed. The installer shows the license, installs to Program Files, adds Start-menu (and optional desktop) shortcuts and an uninstaller, and installs ViGEmBus when it's missing. Keep the `AppId` in `installer.iss` unchanged so upgrades replace the existing install.

@@ -11,7 +11,7 @@ if not exist mech_mapper.ico echo Note: mech_mapper.ico not found - building wit
 
 python -m PyInstaller --noconfirm --onefile --windowed --uac-admin ^
     --add-data "vendor;vendor" --collect-all vgamepad %ICON_ARGS% ^
-    --add-data "LICENSE.txt;." --add-data "THIRD_PARTY_NOTICES.txt;." ^
+    --add-data "LICENSE.txt;." --add-data "THIRD_PARTY_NOTICES.txt;." --add-data "mech_mapper.png;." ^
     MW5_MECHMAPPER.py || goto :fail
 
 echo.

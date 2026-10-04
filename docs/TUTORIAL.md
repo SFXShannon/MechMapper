@@ -37,6 +37,12 @@ The installer also installs **ViGEmBus**, the small driver that lets Mech Mapper
 
 ## 2. A tour of the window
 
+The first time you start Mech Mapper, a quick tour walks you through the basics. Tick **Don't show this at startup** if you don't want it every time; you can open it again whenever you like from **Tutorial** at the top of the window.
+
+![The quick tour that opens when Mech Mapper starts](images/app_tour.png)
+
+Here's the main window:
+
 ![The Mech Mapper window with its main areas numbered](images/overview_annotated.png)
 
 1. **Devices**: every controller Windows can see. Mech Mapper reads *all* of them at once, so you can mix a stick, a throttle and pedals in one profile. Selecting one only picks which device the tester shows. Devices are picked up automatically when you plug them in.
