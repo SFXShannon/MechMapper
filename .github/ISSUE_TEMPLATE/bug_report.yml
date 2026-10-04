@@ -1,0 +1,76 @@
+name: Bug report
+description: Something in Mech Mapper doesn't work as expected
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. The more detail you give, the faster it can be fixed.
+        Tip: **Report a problem** at the top of the app sends a report without a GitHub account, with your version and setup filled in.
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Shown in the top-right corner of the app (for example 2.3.0).
+      placeholder: "2.3.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the app?
+      options:
+        - Binding / mapping
+        - Virtual Xbox controller
+        - Keyboard keys
+        - Devices / input tester
+        - Profiles
+        - Quick tour / tutorial
+        - Installer / updates
+        - Starting the app
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+      placeholder: |
+        1. Clicked Map on LX and moved my stick
+        2. ...
+        Expected: ...
+        Actually: ...
+    validations:
+      required: true
+  - type: textarea
+    id: status-message
+    attributes:
+      label: Message shown by the app
+      description: Copy any message from the status bar at the bottom of the window or from a pop-up.
+      render: text
+  - type: input
+    id: controllers
+    attributes:
+      label: Controllers
+      description: The devices listed at the top of the app that you're using.
+      placeholder: "e.g. Thrustmaster Warthog throttle, VKB Gladiator"
+  - type: input
+    id: game
+    attributes:
+      label: Game
+      placeholder: "e.g. MechWarrior 5: Mercenaries (Steam), in VR with UEVR"
+  - type: dropdown
+    id: how-run
+    attributes:
+      label: How do you run it?
+      options:
+        - Installed (MechMapper-Setup)
+        - Portable exe (MW5_MECHMAPPER.exe)
+        - From source (Python)
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Drag images here if they help show the problem.

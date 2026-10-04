@@ -18,6 +18,7 @@ Architecture
 import ctypes
 import hashlib
 import json
+import platform
 import os
 import queue
 import re
@@ -44,7 +45,7 @@ import tkinter as tk  # noqa: E402
 from tkinter import ttk, messagebox  # noqa: E402
 
 APP_NAME = "Mech Mapper"
-APP_VERSION = "2.2.0"      # must match the GitHub release tag (v2.0.0) - the release workflow checks
+APP_VERSION = "2.3.0"      # must match the GitHub release tag (v2.0.0) - the release workflow checks
 GITHUB_REPO = "SFXShannon/MechMapper"
 IS_WINDOWS = os.name == "nt"
 
@@ -86,6 +87,13 @@ VIGEM_INSTALLER = os.path.join("vendor", "ViGEmBus_1.22.0_x64_x86_arm64.exe")
 ICON_FILE = "mech_mapper.ico"
 LOGO_FILE = "mech_mapper.png"
 GUIDE_URL = f"https://github.com/{GITHUB_REPO}/blob/main/docs/TUTORIAL.md"
+ISSUES_URL = f"https://github.com/{GITHUB_REPO}/issues/new"
+# In-app reports go through the shared relay, which files them as GitHub issues so people
+# need no account. Keep REPORT_AREAS in step with the relay's list for this app.
+RELAY_REPORT_URL = "https://omni-profile-relay.sfxshannon.workers.dev/report"
+REPORT_APP_ID = "mech-mapper"
+REPORT_AREAS = ["Binding / mapping", "Virtual Xbox controller", "Keyboard keys", "Devices / input tester",
+                "Profiles", "Quick tour / tutorial", "Installer / updates", "Starting the app", "Other"]
 
 # ---------------------------------------------------------------------------
 # Tuning
@@ -1421,12 +1429,50 @@ TUTORIAL_STEPS = [
      "body": "Type a name in Profile and click Save. The profile you used last loads by itself next "
              "time, and a * in the title bar means there are unsaved changes.\n\nFolder opens the "
              "folder your profiles are kept in, so you can back them up or copy them to another PC."},
+    {"icon": "report", "title": "Report a problem or suggest an idea", "since": "2.3.0",
+     "body": "Something not working, or an idea for Mech Mapper? Click Report a problem at the top "
+             "of the window. Describe it, click Send, and it goes straight to the developer; you "
+             "don't need a GitHub account.\n\nThe app adds its version, your Windows version and "
+             "your controller names so the problem is easier to track down. Untick that box if "
+             "you'd rather not include them."},
     {"icon": "update", "title": "Updates and help",
      "body": "Mech Mapper checks for new versions when it starts and offers to install them. Click "
              "the version in the top-right corner to check yourself.\n\nOpen this tour again any "
              "time from Tutorial at the top of the window. Full guide opens the step-by-step guide "
              "with pictures."},
 ]
+
+
+def send_report(report, timeout=20):
+    """POST a report to the relay. Returns (issue_number, url); raises UpdateError with a readable reason."""
+    data = json.dumps(report).encode("utf-8")
+    req = urllib.request.Request(RELAY_REPORT_URL, data=data, method="POST", headers={
+        "Content-Type": "application/json; charset=utf-8", "User-Agent": f"MechMapper/{APP_VERSION}"})
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            reply = json.load(resp)
+    except urllib.error.HTTPError as e:
+        try:
+            reason = json.loads(e.read().decode("utf-8", "replace")).get("error")
+        except (ValueError, OSError):
+            reason = None
+        raise UpdateError(reason or f"The report service returned HTTP {e.code}.")
+    except (urllib.error.URLError, OSError, ValueError) as e:
+        raise UpdateError(f"Couldn't reach the report service: {getattr(e, 'reason', e)}")
+    if not reply.get("ok"):
+        raise UpdateError(reply.get("error") or "The report wasn't accepted.")
+    return reply.get("number"), reply.get("url")
+
+
+def github_report_url(kind, version, area="", summary="", details="", message=""):
+    """The repo's issue form, pre-filled, for people who'd rather post on GitHub themselves."""
+    if kind == "idea":
+        params = {"template": "feature_request.yml", "title": f"[Idea] {summary}".strip(),
+                  "area": area, "problem": details}
+    else:
+        params = {"template": "bug_report.yml", "title": f"[Bug] {summary}".strip(), "version": version,
+                  "area": area, "what-happened": details, "status-message": message}
+    return ISSUES_URL + "?" + urllib.parse.urlencode({k: v for k, v in params.items() if v})
 
 
 def new_tutorial_steps(seen):
@@ -1578,6 +1624,10 @@ class MechMapperApp:
                                      font=FONT_MONO, cursor="hand2")
         self.tutorial_btn.pack(side=tk.RIGHT, padx=8)
         self.tutorial_btn.bind("<Button-1>", lambda e: self.show_tutorial())
+        self.report_btn = tk.Label(header, text="\u2691 Report a problem", bg=C["panel"], fg=C["amber"],
+                                   font=FONT_MONO, cursor="hand2")
+        self.report_btn.pack(side=tk.RIGHT, padx=8)
+        self.report_btn.bind("<Button-1>", lambda e: self.show_report_form())
         self.update_btn.bind("<Button-1>", lambda e: self.on_update_clicked())
 
         outer, body = self.make_section(
@@ -1936,6 +1986,10 @@ class MechMapperApp:
                     self._update_armed_lamp()
                 elif kind.startswith("update_"):
                     self._handle_update_event(kind, ev[1:])
+                elif kind == "report_result":
+                    done = getattr(ev[2], "_report_done", None)
+                    if done:
+                        done(ev[1])
         except queue.Empty:
             pass
         self._pump_after = self.root.after(30, self._pump_engine_events)
@@ -2264,6 +2318,226 @@ class MechMapperApp:
                            fg="#14171b" if pressed else C["muted"])
         win.after(33, self.update_tester)
 
+    # ---------------- Report a problem ----------------
+
+    def _system_details(self):
+        """What a report includes when 'Include my setup details' is ticked (shown in the form)."""
+        if IS_INSTALLED:
+            install = "installed"
+        elif getattr(sys, "frozen", False):
+            install = "portable exe"
+        else:
+            install = "from source"
+        win = platform.win32_ver()[1] if IS_WINDOWS else platform.platform()
+        devices = [d["name"] for d in self.engine.devices if not d["virtual"]]
+        return {
+            "Windows": win or platform.platform(),
+            "Install": install,
+            "Controllers": ", ".join(devices) or "none connected",
+            "Key mode": self.key_mode_var.get(),
+            "Virtual controller": "on" if self.engine.pad_enabled else "off",
+            "Keyboard binds": "on" if self.engine.kb_enabled else "off",
+        }
+
+    def show_report_form(self):
+        if getattr(self, "_report_window", None) is not None:
+            try:
+                self._report_window.lift()
+                return
+            except tk.TclError:
+                pass
+        scale = max(1.0, float(self.root.tk.call("tk", "scaling")) / (96 / 72))
+        win = tk.Toplevel(self.root)
+        self._report_window = win
+        win.title(f"{APP_NAME} - Report a problem or suggest an idea")
+        win.configure(bg=C["bg"])
+        win.transient(self.root)
+        win.resizable(False, False)
+
+        kind = tk.StringVar(value="bug")
+        area = tk.StringVar(value="")
+        summary = tk.StringVar()
+        message = tk.StringVar(value=self.status_label.cget("text"))
+        include = tk.BooleanVar(value=True)
+        sending = {"on": False}
+        pad = {"padx": 24}
+
+        def label(parent, text, **kw):
+            return tk.Label(parent, text=text, bg=C["bg"], fg=kw.pop("fg", C["text"]),
+                            font=kw.pop("font", FONT_UI_B), anchor="w", justify="left", **kw)
+
+        top = tk.Frame(win, bg=C["bg"])
+        top.pack(fill=tk.X, pady=(20, 6), **pad)
+        kinds = {}
+        for value, text in (("bug", "\u2691  Report a problem"), ("idea", "\u2726  Suggest an idea")):
+            b = tk.Label(top, text=text, font=FONT_UI_B, padx=14, pady=6, cursor="hand2")
+            b.pack(side=tk.LEFT, padx=(0, 8))
+            b.bind("<Button-1>", lambda e, v=value: (kind.set(v), refresh()))
+            kinds[value] = b
+
+        form = tk.Frame(win, bg=C["bg"])
+        form.pack(fill=tk.BOTH, expand=True, **pad)
+        label(form, "Which part of the app?").pack(fill=tk.X, pady=(10, 2))
+        area_box = ttk.Combobox(form, textvariable=area, values=REPORT_AREAS, state="readonly", width=34)
+        area_box.pack(anchor="w")
+        label(form, "Summary").pack(fill=tk.X, pady=(12, 2))
+        summary_entry = tk.Entry(form, textvariable=summary, bg=C["panel2"], fg=C["text"],
+                                 insertbackground=C["text"], relief=tk.FLAT, font=FONT_UI,
+                                 highlightthickness=1, highlightbackground=C["border"],
+                                 highlightcolor=C["amber"])
+        summary_entry.pack(fill=tk.X, ipady=4)
+        details_lbl = label(form, "")
+        details_lbl.pack(fill=tk.X, pady=(12, 0))
+        details_hint = label(form, "", fg=C["muted"], font=FONT_UI)
+        details_hint.pack(fill=tk.X, pady=(0, 4))
+        details = tk.Text(form, height=7, width=64, wrap="word", bg=C["panel2"], fg=C["text"],
+                          insertbackground=C["text"], relief=tk.FLAT, font=FONT_UI,
+                          highlightthickness=1, highlightbackground=C["border"], highlightcolor=C["amber"])
+        details.pack(fill=tk.X)
+        msg_frame = tk.Frame(form, bg=C["bg"])
+        label(msg_frame, "Message shown by the app (if any)").pack(fill=tk.X, pady=(12, 2))
+        tk.Entry(msg_frame, textvariable=message, bg=C["panel2"], fg=C["text"], insertbackground=C["text"],
+                 relief=tk.FLAT, font=FONT_MONO, highlightthickness=1, highlightbackground=C["border"],
+                 highlightcolor=C["amber"]).pack(fill=tk.X, ipady=4)
+
+        sys_frame = tk.Frame(form, bg=C["bg"])
+        sys_frame.pack(fill=tk.X, pady=(14, 0))
+        tk.Checkbutton(sys_frame, variable=include, text="Include my setup details",
+                       bg=C["bg"], fg=C["text"], activebackground=C["bg"], activeforeground=C["text"],
+                       selectcolor=C["panel2"], highlightthickness=0, bd=0, font=FONT_UI).pack(anchor="w")
+        details_list = "; ".join(f"{k}: {v}" for k, v in self._system_details().items())
+        label(sys_frame, f"Mech Mapper {APP_VERSION}; {details_list}", fg=C["muted"], font=("Segoe UI", 9),
+              wraplength=int(560 * scale)).pack(fill=tk.X, padx=(22, 0))
+        label(form, "Reports are posted publicly on GitHub, so don't include personal information.",
+              fg=C["muted"], font=("Segoe UI", 9)).pack(fill=tk.X, pady=(10, 0))
+
+        bar = tk.Frame(win, bg=C["panel"], highlightthickness=1, highlightbackground=C["border"])
+        bar.pack(fill=tk.X, side=tk.BOTTOM, pady=(16, 0))
+        status = tk.Label(bar, text="", bg=C["panel"], fg=C["muted"], font=FONT_UI, anchor="w")
+        gh = tk.Label(bar, text="Post on GitHub instead", bg=C["panel"], fg=C["amber"], font=FONT_UI,
+                      cursor="hand2")
+        gh.pack(side=tk.LEFT, padx=(16, 0), pady=12)
+        send_btn = ttk.Button(bar, text="Send", style="Map.TButton", width=10)
+        send_btn.pack(side=tk.RIGHT, padx=(6, 16), pady=10)
+        cancel_btn = ttk.Button(bar, text="Cancel", width=8)
+        cancel_btn.pack(side=tk.RIGHT, pady=10)
+        status.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=12)
+
+        def refresh():
+            bug = kind.get() == "bug"
+            for value, b in kinds.items():
+                on = value == kind.get()
+                b.config(bg=C["amber"] if on else C["panel2"], fg="#14171b" if on else C["text"])
+            details_lbl.config(text="What happened?" if bug else "What would you like?")
+            details_hint.config(text="What did you do, what did you expect, and what happened instead?" if bug
+                                else "Describe what you're trying to do, not just the solution.")
+            if bug:
+                msg_frame.pack(fill=tk.X, after=details)
+            else:
+                msg_frame.pack_forget()
+
+        def collect():
+            return {
+                "app": REPORT_APP_ID, "kind": kind.get(), "version": APP_VERSION, "area": area.get(),
+                "summary": summary.get().strip(), "details": details.get("1.0", "end").strip(),
+                "message": message.get().strip() if kind.get() == "bug" else "",
+                "system": self._system_details() if include.get() else {},
+            }
+
+        def problem(rep):
+            if not rep["area"]:
+                return "Pick which part of the app this is about."
+            if len(rep["summary"]) < 4:
+                return "Add a short summary."
+            if len(rep["details"]) < 10:
+                return "Describe it in a sentence or two."
+            return None
+
+        def close():
+            if sending["on"]:
+                return
+            try:
+                win.grab_release()
+            except tk.TclError:
+                pass
+            win.destroy()
+            self._report_window = None
+
+        def open_github():
+            rep = collect()
+            webbrowser.open(github_report_url(rep["kind"], APP_VERSION, rep["area"], rep["summary"],
+                                              rep["details"], rep["message"]))
+
+        def send():
+            rep = collect()
+            err = problem(rep)
+            if err:
+                status.config(text=err, fg=C["red"])
+                return
+            sending["on"] = True
+            send_btn.state(["disabled"])
+            cancel_btn.state(["disabled"])
+            status.config(text="Sending...", fg=C["muted"])
+
+            def run():
+                try:
+                    result = ("ok",) + send_report(rep)
+                except UpdateError as e:
+                    result = ("error", str(e))
+                except Exception as e:  # never leave the form stuck on "Sending..."
+                    result = ("error", f"Couldn't send the report: {e}")
+                self.engine.events.put(("report_result", result, win))
+
+            threading.Thread(target=run, daemon=True).start()
+
+        def done(result):
+            sending["on"] = False
+            try:
+                send_btn.state(["!disabled"])
+                cancel_btn.state(["!disabled"])
+            except tk.TclError:
+                return
+            if result[0] == "ok":
+                _, number, url = result
+                close()
+                if messagebox.askyesno("Thanks!", f"Your report was sent (#{number}). Thank you!\n\n"
+                                       "Open it on GitHub to follow along?"):
+                    webbrowser.open(url or f"https://github.com/{GITHUB_REPO}/issues/{number}")
+                self.set_status(f"Report sent (#{number}) - thanks!", "ok")
+            else:
+                status.config(text=result[1], fg=C["red"])
+                if messagebox.askyesno("Couldn't send the report",
+                                       f"{result[1]}\n\nOpen the report form on GitHub instead? "
+                                       "(Needs a free GitHub account; what you wrote is filled in.)",
+                                       parent=win):
+                    open_github()
+
+        def clear_hint(*_):
+            if not sending["on"] and status.cget("fg") == C["red"]:
+                status.config(text="")
+
+        summary.trace_add("write", clear_hint)
+        area.trace_add("write", clear_hint)
+        details.bind("<Key>", clear_hint)
+
+        win._report_done = done
+        send_btn.config(command=send)
+        cancel_btn.config(command=close)
+        gh.bind("<Button-1>", lambda e: open_github())
+        win.bind("<Escape>", lambda e: close())
+        win.protocol("WM_DELETE_WINDOW", close)
+        refresh()
+        win.update_idletasks()
+        x = self.root.winfo_rootx() + max(0, (self.root.winfo_width() - win.winfo_reqwidth()) // 2)
+        y = self.root.winfo_rooty() + max(0, (self.root.winfo_height() - win.winfo_reqheight()) // 3)
+        win.geometry(f"+{x}+{y}")
+        try:
+            win.grab_set()
+        except tk.TclError:
+            pass
+        summary_entry.focus_set()
+        return win
+
     # ---------------- Quick tour ----------------
 
     def _startup_tour(self):
@@ -2456,6 +2730,12 @@ class MechMapperApp:
                               cx - 26, cy + 28, outline=a, fill="", width=lw)
             cv.create_rectangle(cx - 14, cy - 28, cx + 12, cy - 12, outline=a, width=lw)
             cv.create_rectangle(cx - 16, cy + 6, cx + 18, cy + 28, outline=a, width=lw)
+        elif name == "report":
+            cv.create_polygon(cx - 32, cy - 26, cx + 32, cy - 26, cx + 32, cy + 14, cx - 6, cy + 14,
+                              cx - 20, cy + 28, cx - 18, cy + 14, cx - 32, cy + 14,
+                              outline=a, fill="", width=lw, joinstyle="round")
+            cv.create_line(cx, cy - 16, cx, cy - 1, fill=a, width=lw + 1, capstyle="round")
+            cv.create_oval(cx - 2, cy + 4, cx + 2, cy + 8, fill=a, outline=a)
         elif name == "update":
             cv.create_line(cx, cy - 30, cx, cy + 6, fill=a, width=lw + 1, capstyle="round")
             cv.create_line(cx - 14, cy - 8, cx, cy + 6, cx + 14, cy - 8, fill=a, width=lw + 1,

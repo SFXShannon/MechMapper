@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions and help
+    url: https://github.com/SFXShannon/MechMapper/discussions/categories/q-a
+    about: Not sure if it's a bug, or need help setting up your controllers? Ask here.
+  - name: Ideas and general chat
+    url: https://github.com/SFXShannon/MechMapper/discussions
+    about: Share ideas and profiles, or show off your cockpit.
+  - name: Step-by-step tutorial
+    url: https://github.com/SFXShannon/MechMapper/blob/main/docs/TUTORIAL.md
+    about: Installing, binding your stick and keys, and troubleshooting, with screenshots.

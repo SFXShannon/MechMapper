@@ -2,7 +2,7 @@
 
 A Windows desktop utility that maps any joystick, HOTAS, or gamepad input to a **virtual Xbox 360 controller** and/or **emulated keyboard presses**, with per-control axis/button modes, named profiles, and a built-in input tester. Built for games (like *MechWarrior 5*) that only recognize a standard Xbox controller, or that poll the keyboard per-frame in ways naive key-emulation libraries miss.
 
-![Platform](https://img.shields.io/badge/platform-Windows-lightgrey) [![Latest release](https://img.shields.io/github/v/release/SFXShannon/MechMapper)](https://github.com/SFXShannon/MechMapper/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/SFXShannon/MechMapper/total?label=downloads)](https://github.com/SFXShannon/MechMapper/releases) [![Latest release](https://img.shields.io/github/v/release/SFXShannon/MechMapper?label=latest)](https://github.com/SFXShannon/MechMapper/releases/latest) [![License: proprietary](https://img.shields.io/badge/license-proprietary-orange)](LICENSE.txt) ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
 
 ![Mech Mapper with a HOTAS profile loaded](docs/images/app_main.png)
 
@@ -22,7 +22,7 @@ The app updates itself: when a new version is out it asks whether to install it.
 
 Mech Mapper needs administrator rights so its key presses reach games that run as administrator (for example with UEVR).
 
-**Something not working?** See also the [troubleshooting table](docs/TUTORIAL.md#9-troubleshooting).
+**Something not working?** See also the [troubleshooting table](docs/TUTORIAL.md#10-troubleshooting).
 - *Game doesn't see the controller:* click **Enable** (it turns green). The game should then see an Xbox 360 controller.
 - *Keyboard binds do nothing in the game:* click **KB Enable**, and try the other **Key Mode** if the game ignores one of them.
 - *Antivirus deletes or blocks the exe:* some antivirus tools wrongly flag apps built with PyInstaller. Allow it in your antivirus, or run from source (see below).
@@ -31,7 +31,7 @@ Mech Mapper needs administrator rights so its key presses reach games that run a
 
 ### The quick tour
 
-The first time you start Mech Mapper, a short tour pops up and walks you through the basics in seven steps: your devices, binding the Xbox controller, keyboard keys, arming it, profiles, and updates. Use **Next** and **Back** (or the arrow keys).
+The first time you start Mech Mapper, a short tour pops up and walks you through the basics in eight steps: your devices, binding the Xbox controller, keyboard keys, arming it, profiles, reporting a problem, and updates. Use **Next** and **Back** (or the arrow keys).
 
 ![The quick tour that opens when Mech Mapper starts](docs/images/app_tour.png)
 
@@ -51,9 +51,21 @@ For the details, with screenshots, read the **[tutorial](docs/TUTORIAL.md)**:
 6. [Arm it and play](docs/TUTORIAL.md#6-arm-it-and-play)
 7. [Save profiles](docs/TUTORIAL.md#7-save-profiles)
 8. [Updates](docs/TUTORIAL.md#8-updates)
-9. [Troubleshooting](docs/TUTORIAL.md#9-troubleshooting)
+9. [Report a problem or suggest an idea](docs/TUTORIAL.md#9-report-a-problem-or-suggest-an-idea)
+10. [Troubleshooting](docs/TUTORIAL.md#10-troubleshooting)
 
 [![The Mech Mapper window with its main areas numbered](docs/images/overview_annotated.png)](docs/TUTORIAL.md#2-a-tour-of-the-window)
+
+## Feedback & bug reports
+
+![The in-app report form](docs/images/app_report.png)
+
+- **Found a bug?** Click **Report a problem** at the top of the app. Describe it and click **Send**: it goes straight to the developer as a [GitHub issue](https://github.com/SFXShannon/MechMapper/issues), with your app version, Windows version and controller names attached (untick the box to leave those out). **No GitHub account needed.**
+- **Have an idea?** Use the same form and pick **Suggest an idea**, or post it under Ideas in [Discussions](https://github.com/SFXShannon/MechMapper/discussions/categories/ideas).
+- **Prefer GitHub?** [Open a bug report](https://github.com/SFXShannon/MechMapper/issues/new?template=bug_report.yml) or [suggest a feature](https://github.com/SFXShannon/MechMapper/issues/new?template=feature_request.yml) directly (needs a free GitHub account).
+- **Need help or have a question?** Ask in [Discussions](https://github.com/SFXShannon/MechMapper/discussions/categories/q-a).
+
+Reports are public, so don't include personal information.
 
 ## Features
 
@@ -71,6 +83,7 @@ For the details, with screenshots, read the **[tutorial](docs/TUTORIAL.md)**:
 - **Input tester window**: live view of axes, hats, and buttons for the selected device.
 - **Quick tour** at startup (with a "Don't show this at startup" box), and a **Tutorial** link to open it again.
 - **Built-in updater**: installs new versions from GitHub Releases.
+- **Report a problem** from inside the app, without a GitHub account.
 - **Cockpit-styled UI**: dark theme with amber/green status indicators. A binding shows amber when its device isn't plugged in.
 
 ## Requirements
@@ -140,7 +153,7 @@ The [tutorial](docs/TUTORIAL.md) covers all of this with screenshots. In short:
 6. **Enable** arms the virtual Xbox 360 controller; **KB Enable** arms keyboard emulation. Either can run on its own.
 7. **Profiles**: type a name and **Save**; pick one from the list to load it. **Folder** opens the profiles folder.
 8. **Test Joystick** opens the live tester for the selected device.
-9. **? Tutorial** opens the quick tour again.
+9. **? Tutorial** opens the quick tour again; **Report a problem** sends a bug report or idea.
 
 ## Configuration storage
 

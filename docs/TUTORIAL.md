@@ -12,7 +12,8 @@ This walks you from download to stomping around in MechWarrior 5 with your HOTAS
 6. [Arm it and play](#6-arm-it-and-play)
 7. [Save profiles](#7-save-profiles)
 8. [Updates](#8-updates)
-9. [Troubleshooting](#9-troubleshooting)
+9. [Report a problem or suggest an idea](#9-report-a-problem-or-suggest-an-idea)
+10. [Troubleshooting](#10-troubleshooting)
 
 ---
 
@@ -52,9 +53,10 @@ Here's the main window:
 5. **Key Mode**: how key presses are sent (see [section 5](#5-bind-keyboard-keys)).
 6. **Binds**: the virtual Xbox controller. Each row is one Xbox stick, trigger or button. The *Action* column shows what that control does in MechWarrior 5's default controller layout.
 7. **Keyboard Binds**: 30 slots that turn a button, hat direction or axis into a key press.
-8. **? Tutorial**: opens the quick tour again.
-9. **Version / updates**: click it to check for a new version.
-10. **Status bar**: what just happened, and what Mech Mapper is waiting for.
+8. **Report a problem**: send a bug report or an idea (see [section 9](#9-report-a-problem-or-suggest-an-idea)).
+9. **? Tutorial**: opens the quick tour again.
+10. **Version / updates**: click it to check for a new version.
+11. **Status bar**: what just happened, and what Mech Mapper is waiting for.
 
 Bindings show in **green** when their device is connected and **amber** when it's unplugged.
 
@@ -154,13 +156,30 @@ The title bar shows `*` when you have unsaved changes, and Mech Mapper asks befo
 
 ## 8. Updates
 
-![The Tutorial link and the version label in the top-right corner](images/ui_update.png)
+![Report a problem, Tutorial and the version label in the top-right corner](images/ui_update.png)
 
 A few seconds after it starts, Mech Mapper checks for a new version. When one is out it asks whether to install it now, skip that version, or remind you later. Installing downloads the update, checks it, and restarts Mech Mapper; your profiles are kept. Click the version label any time to check yourself.
 
 ---
 
-## 9. Troubleshooting
+## 9. Report a problem or suggest an idea
+
+Found a bug, or have an idea? Click **Report a problem** at the top of the window.
+
+![The report form, filled in](images/app_report.png)
+
+1. Choose **Report a problem** or **Suggest an idea** at the top.
+2. Pick which part of the app it's about and write a short summary.
+3. Describe what happened (what you did, what you expected, what happened instead), or what you'd like.
+4. Click **Send**.
+
+It goes straight to the developer as a [GitHub issue](https://github.com/SFXShannon/MechMapper/issues). **You don't need a GitHub account.** Mech Mapper fills in the last message it showed and, with **Include my setup details** ticked, adds its version, your Windows version, how it's installed, your controller names and whether the controller and keys are on. Everything that will be sent is listed under the box; untick it to leave those details out. Reports are public, so don't include personal information.
+
+When it's sent, Mech Mapper shows the report number and offers to open it on GitHub, where you can follow along. If it can't be sent (no internet, for example), it offers GitHub's own form instead with what you wrote filled in. That needs a free GitHub account. **Post on GitHub instead** at the bottom of the form does the same.
+
+---
+
+## 10. Troubleshooting
 
 | Problem | What to try |
 |---|---|
@@ -173,4 +192,4 @@ A few seconds after it starts, Mech Mapper checks for a new version. When one is
 | Antivirus blocks Mech Mapper | Some antivirus tools wrongly flag apps built with PyInstaller. Allow it in your antivirus. |
 | The driver install failed | Download ViGEmBus from [its releases page](https://github.com/nefarius/ViGEmBus/releases), install it, then start Mech Mapper again. |
 
-Still stuck? [Open an issue](https://github.com/SFXShannon/MechMapper/issues) and describe what you tried.
+Still stuck? Click **Report a problem** at the top of Mech Mapper, describe what you tried and click **Send**. It reaches the developer without a GitHub account, with your app version and controllers attached. You can also ask in [Discussions](https://github.com/SFXShannon/MechMapper/discussions/categories/q-a).
