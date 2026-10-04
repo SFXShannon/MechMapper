@@ -12,6 +12,10 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      # vgamepad's setup otherwise launches the ViGEmBus driver installer and
+      # waits forever for a click; the build machine doesn't need the driver.
+      VGAMEPAD_SKIP_VIGEMBUS_INSTALL: "true"
     steps:
       - uses: actions/checkout@v4
 
