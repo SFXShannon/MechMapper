@@ -42,7 +42,7 @@ jobs:
           Invoke-WebRequest $sdist -OutFile vgamepad.tar.gz
           tar -xzf vgamepad.tar.gz
           $setup = 'vgamepad-0.1.0\setup.py'
-          (Get-Content $setup -Raw).Replace('subprocess.call(', 'print(') | Set-Content $setup
+          (Get-Content $setup -Raw).Replace('subprocess.call(', '(lambda *a, **k: 0)(') | Set-Content $setup
           python -m pip install .\vgamepad-0.1.0
           if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
 
