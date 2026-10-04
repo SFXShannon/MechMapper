@@ -52,8 +52,9 @@ Here's the main window:
 5. **Key Mode**: how key presses are sent (see [section 5](#5-bind-keyboard-keys)).
 6. **Binds**: the virtual Xbox controller. Each row is one Xbox stick, trigger or button. The *Action* column shows what that control does in MechWarrior 5's default controller layout.
 7. **Keyboard Binds**: 30 slots that turn a button, hat direction or axis into a key press.
-8. **Version / updates**: click it to check for a new version.
-9. **Status bar**: what just happened, and what Mech Mapper is waiting for.
+8. **? Tutorial**: opens the quick tour again.
+9. **Version / updates**: click it to check for a new version.
+10. **Status bar**: what just happened, and what Mech Mapper is waiting for.
 
 Bindings show in **green** when their device is connected and **amber** when it's unplugged.
 
@@ -153,7 +154,7 @@ The title bar shows `*` when you have unsaved changes, and Mech Mapper asks befo
 
 ## 8. Updates
 
-![The version label in the top-right corner](images/ui_update.png)
+![The Tutorial link and the version label in the top-right corner](images/ui_update.png)
 
 A few seconds after it starts, Mech Mapper checks for a new version. When one is out it asks whether to install it now, skip that version, or remind you later. Installing downloads the update, checks it, and restarts Mech Mapper; your profiles are kept. Click the version label any time to check yourself.
 

@@ -6,7 +6,7 @@ A Windows desktop utility that maps any joystick, HOTAS, or gamepad input to a *
 
 ![Mech Mapper with a HOTAS profile loaded](docs/images/app_main.png)
 
-**New here?** The [step-by-step tutorial](docs/TUTORIAL.md) walks you through installing, binding your stick and keys, and playing.
+**New here?** Mech Mapper opens a quick tour the first time it starts, and the [step-by-step tutorial](docs/TUTORIAL.md) walks you through everything with pictures. See [Getting started](#getting-started).
 
 ## Download and install
 
@@ -26,6 +26,34 @@ Mech Mapper needs administrator rights so its key presses reach games that run a
 - *Game doesn't see the controller:* click **Enable** (it turns green). The game should then see an Xbox 360 controller.
 - *Keyboard binds do nothing in the game:* click **KB Enable**, and try the other **Key Mode** if the game ignores one of them.
 - *Antivirus deletes or blocks the exe:* some antivirus tools wrongly flag apps built with PyInstaller. Allow it in your antivirus, or run from source (see below).
+
+## Getting started
+
+### The quick tour
+
+The first time you start Mech Mapper, a short tour pops up and walks you through the basics in seven steps: your devices, binding the Xbox controller, keyboard keys, arming it, profiles, and updates. Use **Next** and **Back** (or the arrow keys).
+
+![The quick tour that opens when Mech Mapper starts](docs/images/app_tour.png)
+
+- Tick **Don't show this at startup** to stop it opening every time.
+- Click **? Tutorial** at the top of the window to open it again whenever you like.
+- When a new version adds a step, that step is shown once after you update, even if the tour is turned off.
+
+### The full tutorial
+
+For the details, with screenshots, read the **[tutorial](docs/TUTORIAL.md)**:
+
+1. [Install Mech Mapper](docs/TUTORIAL.md#1-install-mech-mapper)
+2. [A tour of the window](docs/TUTORIAL.md#2-a-tour-of-the-window): every part of the window, numbered
+3. [Check your devices with the tester](docs/TUTORIAL.md#3-check-your-devices-with-the-tester)
+4. [Bind your stick to the virtual Xbox controller](docs/TUTORIAL.md#4-bind-your-stick-to-the-virtual-xbox-controller)
+5. [Bind keyboard keys](docs/TUTORIAL.md#5-bind-keyboard-keys)
+6. [Arm it and play](docs/TUTORIAL.md#6-arm-it-and-play)
+7. [Save profiles](docs/TUTORIAL.md#7-save-profiles)
+8. [Updates](docs/TUTORIAL.md#8-updates)
+9. [Troubleshooting](docs/TUTORIAL.md#9-troubleshooting)
+
+[![The Mech Mapper window with its main areas numbered](docs/images/overview_annotated.png)](docs/TUTORIAL.md#2-a-tour-of-the-window)
 
 ## Features
 
@@ -112,6 +140,7 @@ The [tutorial](docs/TUTORIAL.md) covers all of this with screenshots. In short:
 6. **Enable** arms the virtual Xbox 360 controller; **KB Enable** arms keyboard emulation. Either can run on its own.
 7. **Profiles**: type a name and **Save**; pick one from the list to load it. **Folder** opens the profiles folder.
 8. **Test Joystick** opens the live tester for the selected device.
+9. **? Tutorial** opens the quick tour again.
 
 ## Configuration storage
 
