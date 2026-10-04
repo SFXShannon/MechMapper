@@ -1,0 +1,51 @@
+Mech Mapper - Software License
+
+Copyright (c) 2026 SFXShannon. All rights reserved.
+
+This is not open-source software. By installing or using Mech Mapper
+("the Software") you agree to these terms.
+
+1. Permission to use
+   You may download, install and use the Software free of charge, for
+   personal, non-commercial purposes, on any computers you own or control.
+
+2. Restrictions
+   Without prior written permission from the copyright holder, you may not:
+   a) modify, adapt, translate, or create derivative works of the Software
+      or its source code;
+   b) copy, redistribute, re-host, sell, rent, lend, sublicense, or bundle
+      the Software with other products. To share it, share the link to the
+      official download page:
+      https://github.com/SFXShannon/MechMapper/releases
+   c) use the Software or any part of its source code for commercial
+      purposes;
+   d) remove or change any copyright or license notice in the Software.
+
+3. Source code
+   The source code is published so people can see what the Software does.
+   Being able to view it gives no rights beyond those in section 1, except
+   the viewing and forking on GitHub that GitHub's Terms of Service allow.
+
+4. Third-party components
+   The Software includes third-party components that are licensed under
+   their own terms, listed in THIRD_PARTY_NOTICES.txt. Nothing in this
+   license limits your rights under those licenses.
+
+5. No warranty
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+   OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+   MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+
+6. Limitation of liability
+   IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES
+   OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+   ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+   OTHER DEALINGS IN THE SOFTWARE.
+
+7. Termination
+   Your permission to use the Software ends automatically if you break these
+   terms. You must then stop using it and delete all copies.
+
+All rights not expressly granted here are reserved by the copyright holder.
+For permission requests, open an issue at
+https://github.com/SFXShannon/MechMapper/issues

@@ -44,7 +44,7 @@ import tkinter as tk  # noqa: E402
 from tkinter import ttk, messagebox  # noqa: E402
 
 APP_NAME = "Mech Mapper"
-APP_VERSION = "2.0.0"      # must match the GitHub release tag (v2.0.0) - the release workflow checks
+APP_VERSION = "2.1.0"      # must match the GitHub release tag (v2.0.0) - the release workflow checks
 GITHUB_REPO = "SFXShannon/MechMapper"
 IS_WINDOWS = os.name == "nt"
 
@@ -66,11 +66,20 @@ if getattr(sys, "frozen", False):
 else:
     APP_DIR = os.path.dirname(os.path.abspath(__file__))
 
-PROFILE_DIR = os.path.join(APP_DIR, "profiles")
+# Installed with the setup program (Inno Setup leaves unins000.exe next to the exe):
+# keep user data out of Program Files. The portable exe keeps it next to itself.
+IS_INSTALLED = getattr(sys, "frozen", False) and os.path.exists(os.path.join(APP_DIR, "unins000.exe"))
+if IS_INSTALLED:
+    DATA_DIR = os.path.join(os.environ.get("APPDATA") or os.path.expanduser("~"), "Mech Mapper")
+else:
+    DATA_DIR = APP_DIR
+PROFILE_DIR = os.path.join(DATA_DIR, "profiles")
 LAST_PROFILE_FILE = os.path.join(PROFILE_DIR, ".last_profile")
 APP_SETTINGS_FILE = os.path.join(PROFILE_DIR, ".app_settings.json")
 # Older locations we migrate profiles from (copied, never deleted)
 LEGACY_PROFILE_DIRS = [APP_DIR, os.path.join(os.path.expanduser("~"), ".mech_mapper_configs")]
+SINGLE_INSTANCE_MUTEX = "MechMapperRunning"  # also named in installer.iss (AppMutex)
+SETUP_ASSET_PREFIX = "mechmapper-setup"
 LEGACY_SINGLE_CONFIG = os.path.join(os.path.expanduser("~"), ".xbox360_mapper_pro.json")
 
 VIGEM_INSTALLER = os.path.join("vendor", "ViGEmBus_1.22.0_x64_x86_arm64.exe")
@@ -160,6 +169,25 @@ def ensure_elevated():
         APP_NAME, MB_YESNO | MB_ICONWARNING)
     if choice != IDYES:
         sys.exit(1)
+
+
+_instance_mutex = None
+
+
+def acquire_single_instance():
+    """False if another Mech Mapper is already running (two would fight over the pad and keys)."""
+    global _instance_mutex
+    if not IS_WINDOWS:
+        return True
+    from ctypes import wintypes as _wt
+    k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    k32.CreateMutexW.restype = _wt.HANDLE
+    k32.CreateMutexW.argtypes = (ctypes.c_void_p, _wt.BOOL, _wt.LPCWSTR)
+    handle = k32.CreateMutexW(None, False, SINGLE_INSTANCE_MUTEX)
+    if ctypes.get_last_error() == 183:  # ERROR_ALREADY_EXISTS
+        return False
+    _instance_mutex = handle  # keep it open for the life of the process
+    return True
 
 
 def _import_vgamepad():
@@ -1244,14 +1272,17 @@ class Updater:
 
     @staticmethod
     def _pick_asset(assets):
+        """Installed copies update with the setup program; portable copies swap the exe."""
         exes = [a for a in assets if a.get("name", "").lower().endswith(".exe")]
-        if not exes:
-            return None
+        setups = [a for a in exes if a["name"].lower().startswith(SETUP_ASSET_PREFIX)]
+        portables = [a for a in exes if a not in setups]
+        if IS_INSTALLED:
+            return setups[0] if setups else None
         current = os.path.basename(sys.executable).lower() if getattr(sys, "frozen", False) else ""
-        for a in exes:
+        for a in portables:
             if a["name"].lower() == current:
                 return a
-        return exes[0]
+        return portables[0] if portables else None
 
     @staticmethod
     def is_newer(info):
@@ -1259,8 +1290,10 @@ class Updater:
 
     def download(self, asset, progress=None):
         """Download the asset next to the running exe; verify size and SHA-256. Returns the path."""
-        dest_dir = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else tempfile.gettempdir()
-        dest = os.path.join(dest_dir, os.path.basename(sys.executable) + ".new")
+        if IS_INSTALLED or not getattr(sys, "frozen", False):
+            dest = os.path.join(tempfile.gettempdir(), os.path.basename(asset["name"]))
+        else:
+            dest = os.path.join(os.path.dirname(sys.executable), os.path.basename(sys.executable) + ".new")
         expected_size = asset.get("size") or 0
         digest = (asset.get("digest") or "").lower()
         sha = hashlib.sha256()
@@ -1304,6 +1337,19 @@ class Updater:
             # a one-file PyInstaller exe runs as a parent bootloader + child; wait for both
             f"$parent = Get-Process -Id {os.getppid()} -ErrorAction SilentlyContinue",
             "if ($parent -and $parent.Path -eq $exe) { Wait-Process -Id $parent.Id -Timeout 30 -ErrorAction SilentlyContinue }",
+        ]
+        if IS_INSTALLED:
+            # run the new setup silently over the installed copy, then start the app again
+            lines += [
+                "$p = Start-Process -FilePath $new -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-' -Wait -PassThru",
+                "Log ('Setup exit code ' + $p.ExitCode)",
+                "Remove-Item $new -Force -ErrorAction SilentlyContinue",
+                "Start-Process -FilePath $exe",
+                "Remove-Item $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue",
+            ]
+            Updater._run_helper(script, lines)
+            return
+        lines += [
             "$moved = $false",
             "for ($i = 0; $i -lt 40 -and -not $moved; $i++) {",
             "  try { if (Test-Path $old) { Remove-Item $old -Force }; Move-Item $exe $old -Force; $moved = $true }",
@@ -1315,6 +1361,10 @@ class Updater:
             "Start-Process -FilePath $exe",
             "Remove-Item $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue",
         ]
+        Updater._run_helper(script, lines)
+
+    @staticmethod
+    def _run_helper(script, lines):
         with open(script, "w", encoding="utf-8-sig") as f:
             f.write("\r\n".join(lines) + "\r\n")
         flags = getattr(subprocess, "CREATE_NO_WINDOW", 0) | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
@@ -2303,6 +2353,10 @@ class MechMapperApp:
 def main():
     global vg
     ensure_elevated()
+    if not acquire_single_instance():
+        message_box("Mech Mapper is already running.\n\nLook for its window on the taskbar.",
+                    APP_NAME, MB_ICONINFO)
+        sys.exit(0)
     vg = ensure_vigembus()
     root = tk.Tk()
     MechMapperApp(root, InputEngine(vg))

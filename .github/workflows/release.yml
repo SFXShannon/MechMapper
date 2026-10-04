@@ -1,5 +1,5 @@
-# Push a tag like v2.1.0 to build MW5_MECHMAPPER.exe and publish it as a
-# GitHub release. The in-app updater downloads the .exe from the latest release.
+# Push a tag like v2.1.0 to build the installer and the portable exe and
+# publish them as a GitHub release. The in-app updater downloads them from the latest release.
 name: Release
 
 on:
@@ -28,9 +28,12 @@ jobs:
           if ($ver -ne $tag) { throw "APP_VERSION is $ver but the tag is $tag - update APP_VERSION first." }
 
       - name: Install dependencies
-        run: python -m pip install -r requirements.txt pyinstaller
+        shell: pwsh
+        run: |
+          python -m pip install -r requirements.txt pyinstaller
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe")) { choco install innosetup -y --no-progress }
 
-      - name: Build exe
+      - name: Build exe and installer
         shell: cmd
         run: build.bat
 
@@ -38,4 +41,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ github.ref_name }}" dist/MW5_MECHMAPPER.exe --title "Mech Mapper ${{ github.ref_name }}" --generate-notes
+        run: |
+          $setup = Get-ChildItem dist\MechMapper-Setup-*.exe | Select-Object -First 1
+          if (-not $setup) { throw "The installer wasn't built." }
+          gh release create "${{ github.ref_name }}" $setup.FullName dist\MW5_MECHMAPPER.exe --title "Mech Mapper ${{ github.ref_name }}" --generate-notes

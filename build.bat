@@ -1,5 +1,5 @@
 @echo off
-rem Builds dist\MW5_MECHMAPPER.exe with PyInstaller.
+rem Builds dist\MW5_MECHMAPPER.exe (portable) and dist\MechMapper-Setup-<version>.exe.
 setlocal
 cd /d "%~dp0"
 
@@ -11,10 +11,14 @@ if not exist mech_mapper.ico echo Note: mech_mapper.ico not found - building wit
 
 python -m PyInstaller --noconfirm --onefile --windowed --uac-admin ^
     --add-data "vendor;vendor" --collect-all vgamepad %ICON_ARGS% ^
+    --add-data "LICENSE.txt;." --add-data "THIRD_PARTY_NOTICES.txt;." ^
     MW5_MECHMAPPER.py || goto :fail
 
 echo.
 echo Built: %~dp0dist\MW5_MECHMAPPER.exe
+
+rem Setup program (needs Inno Setup 6; skipped if it isn't installed)
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0build_installer.ps1" || goto :fail
 exit /b 0
 
 :fail

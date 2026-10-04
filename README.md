@@ -2,19 +2,27 @@
 
 A Windows desktop utility that maps any joystick, HOTAS, or gamepad input to a **virtual Xbox 360 controller** and/or **emulated keyboard presses**, with per-control axis/button modes, named profiles, and a built-in input tester. Built for games (like *MechWarrior 5*) that only recognize a standard Xbox controller, or that poll the keyboard per-frame in ways naive key-emulation libraries miss.
 
-![Python](https://img.shields.io/badge/python-3.8%2B-blue) ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
+![Platform](https://img.shields.io/badge/platform-Windows-lightgrey) [![Latest release](https://img.shields.io/github/v/release/SFXShannon/MechMapper)](https://github.com/SFXShannon/MechMapper/releases/latest)
+
+![Mech Mapper with a HOTAS profile loaded](docs/images/app_main.png)
+
+**New here?** The [step-by-step tutorial](docs/TUTORIAL.md) walks you through installing, binding your stick and keys, and playing.
 
 ## Download and install
 
-1. Download **`MW5_MECHMAPPER.exe`** from the [latest release](https://github.com/SFXShannon/MechMapper/releases/latest).
-2. Put it in its own folder (for example `Documents\Mech Mapper`). Your profiles are saved in a `profiles` folder next to the exe.
-3. Run it. Windows asks for administrator rights; click **Yes**. They're needed so key presses reach games running as administrator (for example with UEVR).
-4. If Windows shows **"Windows protected your PC"**, click **More info**, then **Run anyway**. This appears because the exe isn't code-signed; it's the same for most free tools.
-5. The first time, if the virtual-controller driver (ViGEmBus) is missing, Mech Mapper offers to install it. Click OK and approve the Windows prompt. You only do this once.
+1. Download **`MechMapper-Setup-<version>.exe`** from the [latest release](https://github.com/SFXShannon/MechMapper/releases/latest).
+2. Run it. If Windows shows **"Windows protected your PC"**, click **More info**, then **Run anyway**. This appears because the installer isn't code-signed; it's the same for most free tools.
+3. Click **Yes** when Windows asks for administrator rights, accept the license, and follow the steps. The installer also installs the virtual-controller driver (ViGEmBus) if it's missing.
+4. Start **Mech Mapper** from the Start menu (or the desktop shortcut, if you chose one).
+5. Follow the [tutorial](docs/TUTORIAL.md) to set up your first profile.
 
-That's it. There's no installer, and the app updates itself: when a new version is out it asks whether to install it.
+The app updates itself: when a new version is out it asks whether to install it. Uninstall it from **Settings > Apps** like any other program; your profiles (in `%APPDATA%\Mech Mapper\profiles`) are kept.
 
-**Something not working?**
+**Prefer no installer?** Download **`MW5_MECHMAPPER.exe`** instead, put it in its own folder and run it. That portable copy keeps its profiles in a `profiles` folder next to itself and also updates itself.
+
+Mech Mapper needs administrator rights so its key presses reach games that run as administrator (for example with UEVR).
+
+**Something not working?** See also the [troubleshooting table](docs/TUTORIAL.md#9-troubleshooting).
 - *Game doesn't see the controller:* click **Enable** (it turns green). The game should then see an Xbox 360 controller.
 - *Keyboard binds do nothing in the game:* click **KB Enable**, and try the other **Key Mode** if the game ignores one of them.
 - *Antivirus deletes or blocks the exe:* some antivirus tools wrongly flag apps built with PyInstaller. Allow it in your antivirus, or run from source (see below).
@@ -57,16 +65,20 @@ The app asks for administrator rights on launch and relaunches itself elevated. 
 
 For development without the elevation prompt, set `MECHMAPPER_NO_ELEVATE=1`.
 
-## Building a standalone .exe
+## Building the exe and installer
 
-Run `build.bat` (it installs PyInstaller if needed), or run the same command by hand:
+Run `build.bat` (it installs PyInstaller if needed). It builds:
 
-```bash
-pyinstaller --noconfirm --onefile --windowed --uac-admin ^
-    --add-data "vendor;vendor" --collect-all vgamepad ^
-    --icon mech_mapper.ico --add-data "mech_mapper.ico;." ^
-    MW5_MECHMAPPER.py
-```
+- `dist\MW5_MECHMAPPER.exe`, the portable exe, with PyInstaller:
+
+  ```bash
+  pyinstaller --noconfirm --onefile --windowed --uac-admin ^
+      --add-data "vendor;vendor" --collect-all vgamepad ^
+      --icon mech_mapper.ico --add-data "mech_mapper.ico;." ^
+      --add-data "LICENSE.txt;." --add-data "THIRD_PARTY_NOTICES.txt;." ^
+      MW5_MECHMAPPER.py
+  ```
+- `dist\MechMapper-Setup-<version>.exe`, the installer, with [Inno Setup 6](https://jrsoftware.org/isdl.php) from `installer.iss` (via `build_installer.ps1`). It's skipped if Inno Setup isn't installed. The installer shows the license, installs to Program Files, adds Start-menu (and optional desktop) shortcuts and an uninstaller, and installs ViGEmBus when it's missing. Keep the `AppId` in `installer.iss` unchanged so upgrades replace the existing install.
 
 - `--uac-admin` makes Windows ask for admin rights when the exe starts.
 - `--collect-all vgamepad` bundles `ViGEmClient.dll`, which PyInstaller misses on its own (without it the exe crashes on launch).
@@ -77,17 +89,19 @@ If you update the bundled driver, replace the file in `vendor/` and update `VIGE
 
 ## Updates and releases
 
-Mech Mapper checks GitHub for a newer release a few seconds after it starts, and you can check any time by clicking the version text in the top-right of the window. When a newer version exists you can install it now (it downloads the new `.exe`, verifies it, swaps it in and restarts), skip that version, or be reminded next time. Running from source, it offers to open the release page instead.
+Mech Mapper checks GitHub for a newer release a few seconds after it starts, and you can check any time by clicking the version text in the top-right of the window. When a newer version exists you can install it now (it downloads the new version and verifies it, then an installed copy runs the new setup silently and a portable copy swaps its exe; either way it restarts), skip that version, or be reminded next time. Running from source, it offers to open the release page instead.
 
 To publish a release:
 
 1. Set `APP_VERSION` near the top of `MW5_MECHMAPPER.py` (for example `2.1.0`) and commit.
 2. Tag and push: `git tag v2.1.0` then `git push origin v2.1.0`.
-3. The **Release** GitHub Action builds the exe and attaches it to a new release. It refuses to build if the tag and `APP_VERSION` don't match.
+3. The **Release** GitHub Action builds the installer and the portable exe and attaches both to a new release. It refuses to build if the tag and `APP_VERSION` don't match.
 
 The updater uses GitHub's public API, so **the repository must be public** for other people's copies to see releases. For a private repo, set a GitHub token in the `MECHMAPPER_GITHUB_TOKEN` environment variable on the PCs that should update. If an update can't replace the exe, the reason is written to `update.log` next to the exe.
 
 ## Usage
+
+The [tutorial](docs/TUTORIAL.md) covers all of this with screenshots. In short:
 
 1. **Devices**: every connected device is read for binds. Selecting one only chooses which device the input tester shows.
 2. **Bind controls**: click **Map** next to a control, then move the axis or press the button you want. Press **Esc** (or the Cancel button) to stop waiting; mapping also gives up after 10 seconds. Sticks and triggers can be set to *Axis* or *Button* mode; in Button mode a stick gets separate `+`/`-` binds.
@@ -100,7 +114,7 @@ The updater uses GitHub's public API, so **the repository must be public** for o
 
 ## Configuration storage
 
-Profiles are stored as `profiles/<name>.json` next to the script or exe, and `profiles/.last_profile` remembers which one to load at startup. On first run, profiles from older versions are **copied** into this folder (originals are left in place) from:
+Profiles are stored as `profiles/<name>.json` next to the script or portable exe (or in `%APPDATA%\Mech Mapper\profiles` when installed with the setup program), and `profiles/.last_profile` remembers which one to load at startup. On first run, profiles from older versions are **copied** into this folder (originals are left in place) from:
 
 - `.json` profiles saved next to the script or exe by the previous version
 - `%USERPROFILE%\.mech_mapper_configs\`
@@ -114,4 +128,4 @@ Profiles are stored as `profiles/<name>.json` next to the script or exe, and `pr
 
 ## License
 
-Add a license of your choice (e.g. MIT) here.
+Copyright (c) 2026 SFXShannon. All rights reserved. Mech Mapper is **not open source**: you may download and use it free of charge for personal, non-commercial use, but not modify, redistribute or sell it. See [LICENSE.txt](LICENSE.txt). Third-party components keep their own licenses; see [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt).
