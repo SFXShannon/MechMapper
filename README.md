@@ -4,6 +4,21 @@ A Windows desktop utility that maps any joystick, HOTAS, or gamepad input to a *
 
 ![Python](https://img.shields.io/badge/python-3.8%2B-blue) ![Platform](https://img.shields.io/badge/platform-Windows-lightgrey)
 
+## Download and install
+
+1. Download **`MW5_MECHMAPPER.exe`** from the [latest release](https://github.com/SFXShannon/MechMapper/releases/latest).
+2. Put it in its own folder (for example `Documents\Mech Mapper`). Your profiles are saved in a `profiles` folder next to the exe.
+3. Run it. Windows asks for administrator rights; click **Yes**. They're needed so key presses reach games running as administrator (for example with UEVR).
+4. If Windows shows **"Windows protected your PC"**, click **More info**, then **Run anyway**. This appears because the exe isn't code-signed; it's the same for most free tools.
+5. The first time, if the virtual-controller driver (ViGEmBus) is missing, Mech Mapper offers to install it. Click OK and approve the Windows prompt. You only do this once.
+
+That's it. There's no installer, and the app updates itself: when a new version is out it asks whether to install it.
+
+**Something not working?**
+- *Game doesn't see the controller:* click **Enable** (it turns green). The game should then see an Xbox 360 controller.
+- *Keyboard binds do nothing in the game:* click **KB Enable**, and try the other **Key Mode** if the game ignores one of them.
+- *Antivirus deletes or blocks the exe:* some antivirus tools wrongly flag apps built with PyInstaller. Allow it in your antivirus, or run from source (see below).
+
 ## Features
 
 - **Multi-device input**: reads every connected joystick at once; bind controls from different devices in the same profile. Two identical sticks (same model, same GUID) are told apart.
@@ -29,6 +44,9 @@ A Windows desktop utility that maps any joystick, HOTAS, or gamepad input to a *
 - Python packages from `requirements.txt` (`pygame`, `vgamepad`). `tkinter` ships with the standard Windows Python installer.
 
 ## Running from source
+
+For developers, or if you'd rather not run the exe.
+
 
 ```bash
 pip install -r requirements.txt
