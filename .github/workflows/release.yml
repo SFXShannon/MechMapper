@@ -1,0 +1,41 @@
+# Push a tag like v2.1.0 to build MW5_MECHMAPPER.exe and publish it as a
+# GitHub release. The in-app updater downloads the .exe from the latest release.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check APP_VERSION matches the tag
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}".TrimStart("v")
+          $m = Select-String -Path MW5_MECHMAPPER.py -Pattern '^APP_VERSION = "([^"]+)"'
+          $ver = $m.Matches[0].Groups[1].Value
+          if ($ver -ne $tag) { throw "APP_VERSION is $ver but the tag is $tag - update APP_VERSION first." }
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt pyinstaller
+
+      - name: Build exe
+        shell: cmd
+        run: build.bat
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" dist/MW5_MECHMAPPER.exe --title "Mech Mapper ${{ github.ref_name }}" --generate-notes
